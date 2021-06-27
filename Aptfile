@@ -1,0 +1,7 @@
+libssl-dev
+libcurl4
+libcurl4-openssl-dev
+libsodium-dev
+libzmq3-dev
+libczmq-dev
+libhiredis-dev
