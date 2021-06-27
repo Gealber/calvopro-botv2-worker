@@ -1,6 +1,0 @@
-# Adding concurrency in downloader
-# yeap again, I manage to add redis
-# and I really think is better in this way
-# but still need to handle concurrency on the downloads
-# can i use inproc for the comunication between
-# main thread and child one
