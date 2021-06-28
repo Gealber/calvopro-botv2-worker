@@ -53,7 +53,7 @@ s_recv (void *socket) {
   int size = zmq_msg_recv(&message, socket, 0);
   if(size == -1)
     return NULL;
-  if(size > 100000000000)
+  if(size > 10485760)
     return NULL;
 
   char *string = malloc(size + 1);
