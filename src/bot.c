@@ -177,7 +177,7 @@ int init_bot(void)
   TOKEN_API = getenv("TOKEN_TELGRAM_API");
   if(!TOKEN_API) {
     log_err("TOKEN_TELEGRAM_API environment variable is not setted");
-    return 1;
+    return 0;
   }
-  return 0;
+  return 1;
 }

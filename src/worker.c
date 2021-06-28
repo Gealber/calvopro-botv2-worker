@@ -235,12 +235,67 @@ void create_folder(char *chatid)
     mkdir(chatid, 0700);
 }
 
-void *worker_routine(void *context)
+/*perform the download and upload of the video.
+ * Return 1 on sucess and 0 on failure*/
+int download_upload(DataIncome *data_income, char *file_id)
 {
   CURLcode ret;
-  int rc = 0;
+  /*create the folder in case it doesn't exists*/
+  create_folder(data_income->chatid);
+  debug("Downloading video...");
+  ret = download(data_income->url, data_income->path);
+  if(CURLE_OK != ret) {
+    log_err("Failed to download (%d) error", ret);
+    return 0;
+  }
+
+  /*it will be resized as need*/
+  debug("Uploading video to Telegram API...");
+  /*this is the part where we upload to Telegram*/
+  ret = send_video(data_income->chatid,
+                  data_income->path, file_id);
+  if(CURLE_OK != ret) {
+    log_err("Failed to send video (%d)", ret);
+    return 0;
+  }
+
+  /*removing downloaded file, to save space we are poor*/
+  int rc = remove(data_income->path);
+  if(rc) {
+    log_warn("Error removing file in path: %s", data_income->path);
+    return 0;
+  }
+  return 1;
+}
+
+/* update_redis: put the file_id into redis and decrement
+ * the download counter for the user who make the request.*/
+int update_redis(redisContext *rctx, DataIncome *data_income, char *file_id)
+{
   redisReply *reply;
+  if(strlen(file_id) == 0) {
+    log_err("file_id is empty unable to store key");
+    return 0;
+  }
+  /*add the file_id into redis, with an expiration of 1 month*/
+  reply = redisCommand(rctx, "SET %s %s EX %u NX", data_income->hashkey, file_id, 2592000);
+  freeReplyObject(reply);
+  /*decresing counter of dowload*/
+  reply = redisCommand(rctx, "DECR %s", data_income->chatid);
+  freeReplyObject(reply);
+  return 1;
+}
+
+/* worker_routine: this routine is on a thread.
+ * It waits for task on a PULL ZMQ socket.
+ * Four(NUMT) instances of this "routine" are fired
+ * at the start of the program.*/
+void *worker_routine(void *context)
+{
+  int rc = 0;
+  /*contains the data of a task*/
   DataIncome *data_income;
+  /*store the file_id from Telegram response*/
   char *file_id = malloc(100);
   memset(file_id, 0, 100);
 
@@ -250,18 +305,23 @@ void *worker_routine(void *context)
 
   void *receiver = zmq_socket(context, ZMQ_PULL);
   rc = zmq_connect(receiver, "inproc://workers");
-  assert( rc == 0 );
+  if(rc != 0) {
+    log_err("Unable to fire worker");
+    free(rctx);
+  }
   debug("[RECV]: worker socket is ready on: inproc://workers...");
 
   /*To notify when to kill a socket*/
   void *controller = zmq_socket(context, ZMQ_SUB);
   rc = zmq_connect(controller, "tcp://localhost:5559");
   assert( rc == 0 );
+  /*subscribe to anything that comes*/
   zmq_setsockopt(controller, ZMQ_SUBSCRIBE, "", 0);
   debug("[CONTROL_SUB]: control socket is ready on: 5559...");
 
   /*need to process incomming messages from two sockets
-   * receiver and controller*/
+   * receiver and controller. This is a way to do multiplexing
+   * with ZMQ, or at least is how I understood.*/
   zmq_pollitem_t items[] = {
     {receiver, 0, ZMQ_POLLIN, 0},
     {controller, 0, ZMQ_POLLIN, 0}
@@ -269,45 +329,25 @@ void *worker_routine(void *context)
 
   while(1) {
     zmq_poll(items, 2, -1);
+    /*if there's an event in PULL socket, a task*/
     if(items[0].revents & ZMQ_POLLIN) {
+      /*a json string pull from redis and passed through
+       * the PUSH socket in main. I think a sketch is needed
+       * to understand the flow.*/
       char *json_string = s_recv(receiver);
       if(strlen(json_string) > 0) {
+        /*need to parse json into a DataIncome stuct*/
         data_income = parse_json(json_string);
+        /*validate data_income*/
         if(valid_data(data_income)) {
-          create_folder(data_income->chatid);
-          debug("Downloading video...");
-          ret = download(data_income->url, data_income->path);
-          if(CURLE_OK != ret) {
-            log_err("Failed to download (%d) error", ret);
+          /*donwload and upload*/
+          if(!download_upload(data_income, file_id))
             goto clean;
-          }
 
-          /*it will be resized as need*/
-          debug("Uploading video to Telegram API...");
-          ret = send_video(data_income->chatid,
-                          data_income->path, file_id);
-
-          if(CURLE_OK != ret) {
-            log_err("Failed to send video (%d)", ret);
+          if(!update_redis(rctx, data_income, file_id))
             goto clean;
-          }
-
-          /*removing downloaded file*/
-          int rc = remove(data_income->path);
-          if(rc) {
-            log_warn("Error removing file in path: %s", data_income->path);
-            goto clean;
-          }
-
-          if(strlen(file_id) == 0) {
-            log_err("file_id is empty unable to store key");
-            goto clean;
-          }
-          reply = redisCommand(rctx, "SET %s %s EX %u NX", data_income->hashkey, file_id, 2592000);
-          freeReplyObject(reply);
-          /*decresing counter of dowload*/
-          reply = redisCommand(rctx, "DECR %s", data_income->chatid);
-          freeReplyObject(reply);
+          /*zeroing memmory data in file_id
+           * zeroing?? wtf is that?*/
           memset(file_id, 0, strlen(file_id));
         } else {
           log_err("Invalid data_income supplied");
@@ -317,6 +357,8 @@ void *worker_routine(void *context)
       }
       free(json_string);
     }
+
+    /*if there's an event in SUB socket, a KILL signal*/
     if(items[1].revents & ZMQ_POLLIN) {
       log_warn("\nKILL received from controler, cleaning and killing worker...\n");
       break;
@@ -347,22 +389,26 @@ redisContext *redisCtx()
     log_err("Empty REDIS_URL, make sure you this env was setted");
     return NULL;
   }
+  /*reading redis password env*/
   redis_passwd = getenv("REDIS_PASSWORD");
   if(strlen(redis_passwd) == 0) {
     log_err("Empty REDIS_PASSWORD, make sure this env was setted");
     return NULL;
   }
+  /*reading redis domain env*/
   redis_domain = getenv("REDIS_DOMAIN");
   if(strlen(redis_domain) == 0) {
     log_err("Empty REDIS_DOMAIN, make sure this env was setted");
     return NULL;
   }
+  /*reading redis port env*/
   char *port_str = getenv("REDIS_PORT");
   if(strlen(port_str) != 0)
     port = atoi(port_str);
   else
     port = 6379;
 
+  /*creating redis context*/
   ctx = redisConnect(redis_domain, port);
   if(!ctx || ctx->err) {
     if(ctx)
@@ -391,29 +437,37 @@ int main(int argc, char *argv[])
   SEED();
   int i;
   pthread_t tid[NUMT];
-  redisReply *reply;
-  redisReply *del_reply;
-  redisContext *ctx;
+  redisReply *reply = NULL;
+  redisReply *del_reply = NULL;
+  redisContext *ctx = NULL;
+  /*necessary for ZMQ stuff*/
+  void *context = NULL;
+  void *workers = NULL;
+  void *controller = NULL;
 
   /*Constant values*/
   const char *TASK_QUEUE = "tasks";
+  /*Right now is not been used*/
   const char *BACKUP_TASK_QUEUE = "tasks_back";
 
-  /*need to be destroyed*/
+  /*redis context, need to be destroyed*/
   ctx = redisCtx();
+  if(!ctx)
+    return 0;
 
   /*initialize libcurl*/
   curl_global_init(CURL_GLOBAL_ALL);
 
   /*init bot*/
-  if(init_bot()) {
+  if(!init_bot()) {
     log_err("Unable to init_bot");
     goto end;
   }
 
-  /*creating client PUSH socket*/
-  void *context = zmq_ctx_new();
-  void *workers = zmq_socket(context, ZMQ_PUSH);
+  /* creating PUSH socket to dispatch task to workers
+   * in threads. This other workers are PULL sockets.*/
+  context = zmq_ctx_new();
+  workers = zmq_socket(context, ZMQ_PUSH);
   int rc = zmq_bind(workers, "inproc://workers");
   if(rc != 0) {
     log_err("Unable to create PUSH socket...");
@@ -421,7 +475,8 @@ int main(int argc, char *argv[])
     goto end;
   }
 
-  void *controller = zmq_socket(context, ZMQ_PUB);
+  /*in order to clean the workers on a SIGTERM signal*/
+  controller = zmq_socket(context, ZMQ_PUB);
   rc = zmq_bind(controller, "tcp://*:5559");
   if(rc != 0) {
     log_err("Unable to create PUB socket...");
@@ -429,18 +484,18 @@ int main(int argc, char *argv[])
   }
 
   /*initializing threads to do all the hard work
-   * like a man brrrr. I'm scared*/
+   * like a man Brrrr. I'm scared*/
   for(i = 0; i < NUMT; i++) {
     pthread_create(&tid[i], NULL, worker_routine, context);
   }
 
-  /*this is done synchronously, not a good idea but for now is ok*/
   s_catch_signals();
   while(1) {
     /*retrieve element in redis queue*/
     reply = redisCommand(ctx, "BRPOPLPUSH %s %s %d", TASK_QUEUE, BACKUP_TASK_QUEUE, TIMEOUT);
     if(!reply->str) {
       freeReplyObject(reply);
+      /*Catching Ctr+C commands*/
       if(s_interrupted) {
         log_warn("\nInterrupting and cleaning up...");
         s_send(controller, "KILL");
@@ -449,12 +504,16 @@ int main(int argc, char *argv[])
       continue;
     }
 
-    /*Dispatching work*/
+    /*Dispatching work to ZeroMQ sockets(workers)*/
     s_send(workers, strdup(reply->str));
 
+    /* deleting backup queue, the backup queue is not been used
+     * but for now let's leave this alone.
+     * Refer to: https://aws.amazon.com/es/redis/Redis_Streams_MQ*/
     del_reply = redisCommand(ctx, "DEL %s", BACKUP_TASK_QUEUE);
     freeReplyObject(del_reply);
     freeReplyObject(reply);
+    /*Catching also the Ctr+C*/
     if(s_interrupted) {
       log_warn("\nInterrupting and cleaning up...");
       s_send(controller, "KILL");
@@ -467,11 +526,15 @@ int main(int argc, char *argv[])
     pthread_join(tid[i], NULL);
   }
 
-  /*disconnect and free context*/
 end:
-  zmq_close(controller);
-  zmq_close(workers);
-  zmq_ctx_destroy(context);
+  /*closing ZMQ sockets*/
+  if(controller)
+    zmq_close(controller);
+  if(workers)
+    zmq_close(workers);
+  if(context)
+    zmq_ctx_destroy(context);
+  /*disconnect and free redis context*/
   redisFree(ctx);
   curl_global_cleanup();
   return 0;
