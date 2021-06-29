@@ -123,11 +123,6 @@ CURLcode send_video(char *chatid, char *input_file, char *file_id)
   field = curl_mime_addpart(form);
   curl_mime_name(field, "chat_id");
   curl_mime_data(field, chatid, CURL_ZERO_TERMINATED);
-  /*thumb*/
-  field = curl_mime_addpart(form);
-  curl_mime_name(field, "thumb");
-  const char *thumb = "https://cdn77-pic.xnxx-cdn.com/videos/thumbs169xnxxll/f1/eb/52/f1eb523a7728a6b8431ca3b35b498c9e/f1eb523a7728a6b8431ca3b35b498c9e.12.jpg";
-  curl_mime_data(field, thumb, CURL_ZERO_TERMINATED);
   /*video*/
   field = curl_mime_addpart(form);
   curl_mime_name(field, "video");
