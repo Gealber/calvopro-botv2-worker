@@ -140,6 +140,8 @@ CURLcode send_video(char *chatid, char *input_file, char *file_id)
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
   /* we pass our 'chunk' struct to the callback function */
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+  /*Encoding*/
+  curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
 
   long http_code = 0;
   ret = curl_easy_perform(curl);

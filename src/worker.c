@@ -82,6 +82,8 @@ CURLcode download(char *url, const char *video_name)
   curl_easy_setopt(hnd, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
   /*User Agent*/
   curl_easy_setopt(hnd, CURLOPT_USERAGENT, USER_AGENTS[RAND(8)]);
+  /*Encoding*/
+  curl_easy_setopt(hnd, CURLOPT_ACCEPT_ENCODING, "");
   /*Location and redirection header*/
   curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(hnd, CURLOPT_MAXREDIRS, 5L);
