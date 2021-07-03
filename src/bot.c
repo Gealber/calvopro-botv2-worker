@@ -1,3 +1,4 @@
+#define NDEBUG
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>

@@ -1,3 +1,4 @@
+#define NDEBUG
 #include <string.h>
 #include <signal.h>
 #include <sys/types.h>
