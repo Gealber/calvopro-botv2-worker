@@ -4,6 +4,16 @@
 #include <time.h>
 #include <stdlib.h>
 
+
+#define SEED() srand(time(NULL))
+#define RAND(i) rand() % i
+
+#define NUMT 4
+#define TIMEOUT 10
+
+#define FILEID_MAX 200
+
+
 char *USER_AGENTS[8] = {
  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.94 Chrome/37.0.2062.94 Safari/537.36",
  "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36",
@@ -14,11 +24,6 @@ char *USER_AGENTS[8] = {
  "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36",
  "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36"
 };
-
-#define SEED() srand(time(NULL))
-#define RAND(i) rand() % i
-
-#define FILEID_MAX 200
 
 struct Video {
   const char *name;

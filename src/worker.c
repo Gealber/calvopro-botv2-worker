@@ -1,4 +1,3 @@
-#define NDEBUG
 #include <string.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -17,8 +16,6 @@
 #include "bot.h"
 #include "cJSON.h"
 
-#define NUMT 4
-#define TIMEOUT 10
 
 static int s_interrupted = 0;
 static void s_signal_handler(int signal_value)
@@ -261,6 +258,7 @@ int download_upload(DataIncome *data_income, char *file_id)
     log_err("Failed to send video (%d)", ret);
     return 0;
   }
+  /*this is the part where we upload to Telegram*/
 
   /*removing downloaded file, to save space we are poor*/
   int rc = remove(data_income->path);
@@ -369,7 +367,8 @@ void *worker_routine(void *context)
   }
 
   /*cleaning up*/
-  free(file_id);
+  if(file_id)
+    free(file_id);
   zmq_close(receiver);
   zmq_close(controller);
   redisFree(rctx);
@@ -380,10 +379,10 @@ void *worker_routine(void *context)
 redisContext *redisCtx()
 {
   redisReply *reply;
+  char *redis_passwd;
   redisContext *ctx;
   char *redis_url;
   char *redis_domain;
-  char *redis_passwd;
   int port;
 
   /*reading redis url env*/
@@ -414,11 +413,12 @@ redisContext *redisCtx()
   /*creating redis context*/
   ctx = redisConnect(redis_domain, port);
   if(!ctx || ctx->err) {
-    if(ctx)
+    if(ctx) {
       log_err("%s", ctx->errstr);
+      redisFree(ctx);
+    }
     else
       log_err("Can't allocate redis context");
-    redisFree(ctx);
     return NULL;
   }
 
@@ -427,6 +427,8 @@ redisContext *redisCtx()
   if (reply->type == REDIS_REPLY_ERROR) {
     log_err("Unable to authenticate: with password %s ERR: %s", redis_passwd, reply->str);
     freeReplyObject(reply);
+    redisFree(ctx);
+    return NULL;
   }
   log_info("Connected to redis on: %s", redis_url);
   freeReplyObject(reply);
@@ -508,7 +510,7 @@ int main(int argc, char *argv[])
     }
 
     /*Dispatching work to ZeroMQ sockets(workers)*/
-    s_send(workers, strdup(reply->str));
+    s_send(workers, reply->str);
 
     /* deleting backup queue, the backup queue is not been used
      * but for now let's leave this alone.

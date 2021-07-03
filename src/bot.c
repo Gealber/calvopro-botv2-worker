@@ -1,4 +1,3 @@
-#define NDEBUG
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
@@ -13,9 +12,10 @@ int form_url(char *method_name, char *url,
 {
   int nb = snprintf(url, url_size, "%s%s/%s", BASE_URL, TOKEN_API, method_name);
   if( nb < url_size-1 ) {
-    log_err("Written bytes on url was too short");
+    log_err("Written bytes on url was too short: nb = %d", nb);
     return 1;
   }
+
   return 0;
 }
 
@@ -53,13 +53,13 @@ char *extract_fileid(char *string)
 
   cJSON *json = cJSON_Parse(string);
   if(!json) {
-        const char *error_ptr = cJSON_GetErrorPtr();
-        if (error_ptr != NULL)
-        {
-            fprintf(stderr, "Error before: %s\n", error_ptr);
-            fprintf(stderr, "Error string: %s\n", string);
-        }
-        return NULL;
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if (error_ptr != NULL)
+    {
+        fprintf(stderr, "Error before: %s\n", error_ptr);
+        fprintf(stderr, "Error string: %s\n", string);
+    }
+    return NULL;
   }
 
   result = cJSON_GetObjectItemCaseSensitive(json, "result");
@@ -155,6 +155,10 @@ CURLcode send_video(char *chatid, char *input_file, char *file_id)
   if(http_code == 200) {
     /*storing in redis hashkey: fileid, 30 days*/
     char *ext_fileid = extract_fileid(chunk.memory);
+    if(!ext_fileid) {
+      debug("fileid is NULL");
+      goto end;
+    }
     size_t ext_len = strlen(ext_fileid);
     if(ext_len > 100) {
       debug("file id > 100 characters");

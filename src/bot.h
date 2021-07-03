@@ -3,7 +3,12 @@
 
 #include <curl/curl.h>
 
+#ifndef TESTDEV
 #define BASE_URL "https://api.telegram.org/bot"
+#else
+#define BASE_URL "http://localhost:4000"
+#endif
+
 #define URL_MAX 256
 #define USER_AGENT "calvopro-bot/v2"
 
