@@ -1,6 +1,6 @@
 CC=gcc
 #CFLAGS=-g -Wall -Werror `curl-config --cflags` -DTESTDEV 
-CFLAGS=-g -Wall -Werror `curl-config --cflags`
+CFLAGS=-g -Wall -Werror `curl-config --cflags` -DNDEBUG 
 LDLIBS=`curl-config --libs` -lzmq -lpthread -lhiredis
 BUILD_DIR=build
 EXEC_DIR=build/bin
