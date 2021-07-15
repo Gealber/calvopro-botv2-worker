@@ -178,6 +178,7 @@ CURLcode send_video(char *chatid,
     free(ext_fileid);
   } else {
     log_err("Expected 200 got (%lu) HTTP code", http_code);
+    log_err("Response: \n%s", chunk.memory);
   }
 
 end:
