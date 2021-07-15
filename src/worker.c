@@ -260,8 +260,7 @@ int download_upload(DataIncome *data_income, char *file_id)
   /*it will be resized as need*/
   debug("Uploading video to Telegram API...");
   /*this is the part where we upload to Telegram*/
-  ret = send_video(data_income->chatid, data_income->imageurl,
-                  data_income->path, file_id);
+  ret = send_video(data_income->chatid, data_income->imageurl, data_income->path, file_id);
   if(CURLE_OK != ret) {
     log_err("Failed to send video (%d)", ret);
   }

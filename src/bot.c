@@ -80,8 +80,7 @@ char *extract_fileid(char *string)
 /* curl: curl handler
  * input_file: path to file
  * */
-CURLcode send_video(char *chatid, char *imageurl,
-    char *input_file,char *file_id)
+CURLcode send_video(char *chatid, char *imageurl, char *input_file,char *file_id)
 {
   char url[URL_MAX];
   CURL *curl;
@@ -135,6 +134,7 @@ CURLcode send_video(char *chatid, char *imageurl,
   }
 
   /*video*/
+  debug("INPUT FILE: %s", input_file);
   field = curl_mime_addpart(form);
   curl_mime_name(field, "video");
   curl_mime_filedata(field, input_file);
