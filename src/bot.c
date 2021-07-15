@@ -128,6 +128,7 @@ CURLcode send_video(char *chatid,
 
   /*thumb*/
   if(imageurl && strlen(imageurl) > 0) {
+    debug("IMAGEURL: %s", imageurl);
     field = curl_mime_addpart(form);
     curl_mime_name(field, "thumb");
     curl_mime_data(field, imageurl, CURL_ZERO_TERMINATED);

@@ -264,7 +264,6 @@ int download_upload(DataIncome *data_income, char *file_id)
                   data_income->path, file_id);
   if(CURLE_OK != ret) {
     log_err("Failed to send video (%d)", ret);
-    return 0;
   }
   /*this is the part where we upload to Telegram*/
 
