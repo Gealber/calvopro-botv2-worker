@@ -32,6 +32,7 @@ struct Video {
 
 typedef struct DataIncome {
   char *url;
+  char *imageurl;
   char *chatid;
   char *path; /*path to file*/
   char *hashkey;
@@ -48,6 +49,8 @@ void destroy(DataIncome *data)
     return ;
   if(data->url)
     free(data->url);
+  if(data->imageurl)
+    free(data->imageurl);
   if(data->chatid)
     free(data->chatid);
   if(data->path)

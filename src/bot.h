@@ -20,7 +20,7 @@ struct MemoryStruct {
 int init_bot(void);
 int form_url(char *method_name, 
                     char *url, size_t url_size);
-CURLcode send_video(char *chatid, char *input_file, char *file_id);
+CURLcode send_video(char *chatid, char *imageurl, char *input_file, char *file_id);
 
 size_t WriteMemoryCallback(void *contents, size_t size,
                                   size_t nmemb, void *userp);

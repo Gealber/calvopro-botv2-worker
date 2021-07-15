@@ -180,6 +180,7 @@ char *create_jsonstr(DataIncome *data)
 DataIncome *parse_json(char *string)
 {
   const cJSON *url = NULL;
+  const cJSON *imageurl = NULL;
   const cJSON *chatid = NULL;
   const cJSON *hashkey = NULL;
   const cJSON *path = NULL;
@@ -206,6 +207,13 @@ DataIncome *parse_json(char *string)
   {
     data->url = strdup(url->valuestring);
   }
+  /*image url*/
+  imageurl = cJSON_GetObjectItemCaseSensitive(json, "imageurl");
+  if (cJSON_IsString(imageurl) && (imageurl->valuestring != NULL))
+  {
+    data->imageurl = strdup(imageurl->valuestring);
+  }
+
   chatid = cJSON_GetObjectItemCaseSensitive(json, "chatid");
   if (cJSON_IsString(chatid) && (chatid->valuestring != NULL))
   {
@@ -252,7 +260,7 @@ int download_upload(DataIncome *data_income, char *file_id)
   /*it will be resized as need*/
   debug("Uploading video to Telegram API...");
   /*this is the part where we upload to Telegram*/
-  ret = send_video(data_income->chatid,
+  ret = send_video(data_income->chatid, data_income->imageurl,
                   data_income->path, file_id);
   if(CURLE_OK != ret) {
     log_err("Failed to send video (%d)", ret);
