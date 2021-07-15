@@ -281,18 +281,20 @@ int download_upload(DataIncome *data_income, char *file_id)
  * the download counter for the user who make the request.*/
 int update_redis(redisContext *rctx, DataIncome *data_income, char *file_id)
 {
+  int ret = 1;
   redisReply *reply;
   if(strlen(file_id) == 0) {
     log_err("file_id is empty unable to store key");
-    return 0;
+    ret = 0;
+  } else {
+    /*add the file_id into redis, with an expiration of 1 month*/
+    reply = redisCommand(rctx, "SET %s %s EX %u NX", data_income->hashkey, file_id, 2592000);
+    freeReplyObject(reply);
   }
-  /*add the file_id into redis, with an expiration of 1 month*/
-  reply = redisCommand(rctx, "SET %s %s EX %u NX", data_income->hashkey, file_id, 2592000);
-  freeReplyObject(reply);
   /*decresing counter of dowload*/
   reply = redisCommand(rctx, "DECR %s", data_income->chatid);
   freeReplyObject(reply);
-  return 1;
+  return ret;
 }
 
 /* worker_routine: this routine is on a thread.
