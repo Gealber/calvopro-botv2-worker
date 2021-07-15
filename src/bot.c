@@ -80,8 +80,8 @@ char *extract_fileid(char *string)
 /* curl: curl handler
  * input_file: path to file
  * */
-CURLcode send_video(char *chatid,
-    char *input_file, char *imageurl, char *file_id)
+CURLcode send_video(char *chatid, char *imageurl,
+    char *input_file,char *file_id)
 {
   char url[URL_MAX];
   CURL *curl;
