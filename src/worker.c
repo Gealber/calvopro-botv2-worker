@@ -55,7 +55,7 @@ static size_t write_video(void *buffer, size_t size,
   return written;
 }
 
-/*download video*/
+/*download video or thumb*/
 CURLcode download(char *url, const char *video_name)
 {
   CURL *hnd;
@@ -247,6 +247,7 @@ void create_folder(char *chatid)
  * Return 1 on sucess and 0 on failure*/
 int download_upload(DataIncome *data_income, char *file_id)
 {
+  char thumb_path[100] = {0};
   CURLcode ret;
   /*create the folder in case it doesn't exists*/
   create_folder(data_income->chatid);
@@ -257,10 +258,19 @@ int download_upload(DataIncome *data_income, char *file_id)
     return 0;
   }
 
+  if(data_income->imageurl && strlen(data_income->imageurl) > 0) {
+    debug("Downloading thumb...");
+    snprintf(thumb_path, strlen(data_income->path) + 5, "%s.jpg", data_income->path);
+    ret = download(data_income->imageurl, thumb_path);
+    if(CURLE_OK != ret) {
+      log_err("Failed to download thumb (%d) error", ret);
+    }
+  }
+
   /*it will be resized as need*/
   debug("Uploading video to Telegram API...");
   /*this is the part where we upload to Telegram*/
-  ret = send_video(data_income->chatid, data_income->imageurl, data_income->path, file_id);
+  ret = send_video(data_income->chatid, thumb_path, data_income->path, file_id);
   if(CURLE_OK != ret) {
     log_err("Failed to send video (%d)", ret);
   }
