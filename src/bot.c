@@ -127,6 +127,7 @@ CURLcode send_video(char *chatid, char *thumb_path, char *input_file,char *file_
 
   /*thumb*/
   if(thumb_path && strlen(thumb_path) > 0) {
+    debug("THUMBNAIL FILE: %s", input_file);
     field = curl_mime_addpart(form);
     curl_mime_name(field, "thumb");
     curl_mime_filedata(field, thumb_path);
