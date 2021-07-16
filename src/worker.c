@@ -282,6 +282,15 @@ int download_upload(DataIncome *data_income, char *file_id)
     log_warn("Error removing file in path: %s", data_income->path);
     return 0;
   }
+
+  if(strlen(thumb_path) > 0) {
+    int rc = remove(thumb_path);
+    if(rc) {
+      log_warn("Error removing file in path: %s", thumb_path);
+      return 0;
+    }
+  }
+
   return 1;
 }
 
