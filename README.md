@@ -1,6 +1,10 @@
 # calvopro-botv2-worker
 
-## Heroku
+Este repositorrio contiene el código relativo a los workers de @BusyHandBot, está escrito 
+completamente en C, haciendo uso de **libcurl**, **hiredis** y **cJSON**. En caso de cualquier
+sugerencia, que no sea reescribir el código en Rust, puede contactarme a <gealber@tutanota.com>.
+
+## Despliegue en Heroku
 
 * Clona este repositorio, lamentablemente Heroku no funciona como Python anywhere
 
