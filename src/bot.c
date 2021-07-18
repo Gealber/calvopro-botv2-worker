@@ -139,6 +139,11 @@ CURLcode send_video(char *chatid, char *thumb_path, char *input_file,char *file_
   curl_mime_name(field, "video");
   curl_mime_filedata(field, input_file);
 
+  /*support streaming*/
+  field = curl_mime_addpart(form);
+  curl_mime_name(field, "supports_streaming");
+  curl_mime_data(field, "true", CURL_ZERO_TERMINATED);
+
   /*URL*/
   curl_easy_setopt(curl, CURLOPT_URL, url);
   curl_easy_setopt(curl, CURLOPT_USERAGENT, USER_AGENT);
