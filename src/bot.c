@@ -100,6 +100,7 @@ CURLcode send_video(char *chatid, char *thumb_path, char *input_file,char *file_
   if(url_size > URL_MAX) {
     ret = CURLE_URL_MALFORMAT;
     log_err("URL supplied is too large");
+    free(chunk.memory);
     return ret;
   }
 
@@ -107,6 +108,7 @@ CURLcode send_video(char *chatid, char *thumb_path, char *input_file,char *file_
   int code = form_url(method_name, url, url_size);
   if(code) {
     ret = CURLE_URL_MALFORMAT;
+    free(chunk.memory);
     return ret;
   }
 
@@ -114,6 +116,7 @@ CURLcode send_video(char *chatid, char *thumb_path, char *input_file,char *file_
   if(!curl) {
     ret = CURLE_OUT_OF_MEMORY;
     log_err("Unable to init easy curl");
+    free(chunk.memory);
     return ret;
   }
 
